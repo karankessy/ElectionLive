@@ -73,6 +73,23 @@ export interface ElectionData {
   rspCandidates: RSPCandidate[];
   popularCandidates: PopularRace[];
   overview: Overview;
+  spotlight?: SpotlightRace;
+}
+
+export interface SpotlightCandidate {
+  id: number;
+  name: string;
+  party: string;
+  img: string;
+  partyImg: string;
+  votes: number;
+  margin: number;
+  isLeading: boolean;
+}
+
+export interface SpotlightRace {
+  constituency: string;
+  candidates: SpotlightCandidate[];
 }
 
 export interface ChangeEvent {

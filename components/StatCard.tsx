@@ -9,12 +9,19 @@ interface Props {
 
 export default function StatCard({ label, value, sub, color }: Props) {
   return (
-    <div className="card flex flex-col gap-1">
-      <p className="section-title mb-1">{label}</p>
-      <p className="text-2xl font-bold" style={color ? { color } : undefined}>
-        {value}
+    <div className="card cursor-default">
+      <p className="text-[11px] sm:text-xs font-medium text-[var(--muted)] uppercase tracking-wide mb-1">
+        {label}
       </p>
-      {sub && <p className="text-xs text-[var(--muted)]">{sub}</p>}
+      <p
+        className="text-2xl sm:text-3xl font-bold tabular-nums leading-tight"
+        style={color ? { color } : undefined}
+      >
+        {typeof value === 'number' ? value.toLocaleString('en-US') : value}
+      </p>
+      {sub && (
+        <p className="text-[11px] sm:text-xs text-[var(--muted)] mt-1 tabular-nums">{sub}</p>
+      )}
     </div>
   );
 }

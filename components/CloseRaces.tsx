@@ -22,49 +22,76 @@ export default function CloseRaces({ races }: Props) {
     })
     .sort((a, b) => a.margin - b.margin);
 
-  if (close.length === 0) return null;
-
   return (
-    <div className="card" style={{ borderColor: 'rgba(245,158,11,0.3)' }}>
-      <p className="section-title" style={{ color: '#f59e0b' }}>
-        ⚠ Close Races — Margin under {fmt(CLOSE_THRESHOLD)} votes ({close.length} seats)
-      </p>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-        {close.map(r => (
-          <div
-            key={r.constituency}
-            className="rounded-lg p-3 border"
-            style={{
-              background: 'rgba(245,158,11,0.05)',
-              borderColor: 'rgba(245,158,11,0.2)',
-            }}
-          >
-            <p className="text-xs font-semibold text-amber-300 mb-2 truncate">
-              {r.constituency}
-            </p>
-
-            <div className="flex items-center gap-2 mb-1">
-              <span
-                className="w-2 h-2 rounded-full shrink-0"
-                style={{ background: partyColor(r.top.party) }}
-              />
-              <span className="text-xs flex-1 truncate">{r.top.name}</span>
-              <span className="text-xs font-bold">{fmt(r.top.votes)}</span>
-            </div>
-
-            <div className="flex items-center gap-2 opacity-60">
-              <span
-                className="w-2 h-2 rounded-full shrink-0"
-                style={{ background: partyColor(r.second.party) }}
-              />
-              <span className="text-xs flex-1 truncate">{r.second.name}</span>
-              <span className="text-xs">{fmt(r.second.votes)}</span>
-            </div>
-
-            <p className="text-[11px] text-amber-400 font-bold mt-2">Gap: {fmt(r.margin)}</p>
-          </div>
-        ))}
+    <div className="card card--highlight">
+      <div className="flex items-center gap-2 mb-4">
+        <p className="section-title !mb-0" style={{ color: 'var(--amber)' }}>
+          Close Races
+        </p>
+        <span className="text-[11px] text-[var(--muted)]">
+          Margin under {fmt(CLOSE_THRESHOLD)}
+        </span>
+        {close.length > 0 && (
+          <span className="badge bg-amber-100 text-amber-800 border-amber-300 ml-auto">
+            {close.length}
+          </span>
+        )}
       </div>
+
+      {close.length === 0 ? (
+        <p className="text-[var(--muted)] text-xs sm:text-sm py-4 text-center">
+          No races within {fmt(CLOSE_THRESHOLD)} votes
+        </p>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+          {close.map(r => (
+            <div
+              key={r.constituency}
+              className="inner-card hover-lift border-amber-200 bg-amber-50/50"
+            >
+              <p className="text-[11px] sm:text-xs font-semibold text-amber-800 mb-2.5 truncate">
+                {r.constituency}
+              </p>
+
+              <div className="flex items-center gap-2.5 mb-2">
+                {r.top.img ? (
+                  <img src={r.top.img} alt={r.top.name} className="w-8 h-8 rounded-full object-cover ring-2 shrink-0" style={{ borderColor: partyColor(r.top.party) }} />
+                ) : (
+                  <div className="w-8 h-8 rounded-full shrink-0 flex items-center justify-center text-[10px] font-bold text-white" style={{ background: partyColor(r.top.party) }}>
+                    {r.top.name.charAt(0)}
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium truncate text-[var(--text)]">{r.top.name}</p>
+                  <p className="text-[10px] text-[var(--muted)] truncate">{r.top.party}</p>
+                </div>
+                <span className="text-xs sm:text-sm font-bold tabular-nums text-[var(--text)] shrink-0">{fmt(r.top.votes)}</span>
+              </div>
+
+              <div className="flex items-center gap-2.5 text-[var(--text-secondary)]">
+                {r.second.img ? (
+                  <img src={r.second.img} alt={r.second.name} className="w-8 h-8 rounded-full object-cover ring-2 ring-gray-200 shrink-0" />
+                ) : (
+                  <div className="w-8 h-8 rounded-full shrink-0 flex items-center justify-center text-[10px] font-bold text-white" style={{ background: partyColor(r.second.party) }}>
+                    {r.second.name.charAt(0)}
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium truncate">{r.second.name}</p>
+                  <p className="text-[10px] text-[var(--muted)] truncate">{r.second.party}</p>
+                </div>
+                <span className="text-xs sm:text-sm tabular-nums shrink-0">{fmt(r.second.votes)}</span>
+              </div>
+
+              <div className="mt-2.5 pt-2 border-t border-amber-200">
+                <span className="text-[11px] text-amber-700 font-semibold tabular-nums">
+                  Gap: {fmt(r.margin)} votes
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

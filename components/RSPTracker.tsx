@@ -25,21 +25,25 @@ export default function RSPTracker({ candidates }: Props) {
     return true;
   });
 
+  const isFiltered = query !== '' || province !== 'all';
+
   return (
     <div className="card">
-      <p className="section-title">RSP — Rastriya Swatantra Party Candidates</p>
+      <p className="section-title">RSP — Rastriya Swatantra Party</p>
 
       <div className="flex gap-2 mb-3">
         <input
-          className="flex-1 bg-[var(--surface2)] border border-[var(--border)] rounded px-3 py-1.5 text-sm placeholder:text-[var(--muted)] outline-none focus:border-[var(--accent)] transition-colors"
+          className="flex-1 bg-[var(--surface-alt)] border border-[var(--border)] rounded-lg px-3 py-2 text-xs sm:text-sm text-[var(--text)] placeholder:text-[var(--muted)] outline-none focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent)]/20 transition-all duration-150"
           placeholder="Search name or constituency…"
           value={query}
           onChange={e => setQuery(e.target.value)}
+          aria-label="Search RSP candidates by name or constituency"
         />
         <select
-          className="bg-[var(--surface2)] border border-[var(--border)] rounded px-2 py-1.5 text-sm outline-none"
+          className="bg-[var(--surface-alt)] border border-[var(--border)] rounded-lg px-2 py-2 text-xs sm:text-sm text-[var(--text)] outline-none focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent)]/20 transition-all duration-150"
           value={province}
           onChange={e => setProvince(e.target.value)}
+          aria-label="Filter RSP candidates by province"
         >
           <option value="all">All Provinces</option>
           {provinces.map(p => (
@@ -50,31 +54,39 @@ export default function RSPTracker({ candidates }: Props) {
         </select>
       </div>
 
+      {isFiltered && (
+        <p className="text-[10px] sm:text-[11px] text-[var(--muted)] mb-2 tabular-nums">
+          {filtered.length === 0
+            ? 'No results found'
+            : `${filtered.length} result${filtered.length !== 1 ? 's' : ''}`}
+        </p>
+      )}
+
       <div className="max-h-80 overflow-y-auto space-y-0 pr-1">
         {filtered.length === 0 ? (
-          <p className="text-[var(--muted)] text-sm py-6 text-center">No results found</p>
+          <p className="text-[var(--muted)] text-xs sm:text-sm py-6 text-center">No results found</p>
         ) : (
           filtered.map(c => (
             <div
               key={c.id}
-              className="flex items-center gap-3 py-2.5 border-b border-[var(--border)] last:border-0"
+              className="row-hover flex items-center gap-3 py-2.5 px-2 border-b border-[var(--border)] last:border-0"
             >
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{c.name}</p>
-                <p className="text-xs text-[var(--muted)] truncate">
+                <p className="text-xs sm:text-sm font-medium text-[var(--text)] truncate">{c.name}</p>
+                <p className="text-[10px] sm:text-[11px] text-[var(--muted)] truncate">
                   {c.constituency} · {c.district}
                 </p>
               </div>
               <div className="text-right shrink-0">
-                <p className="text-sm font-bold">{fmt(c.votes)}</p>
+                <p className="text-xs sm:text-sm font-bold tabular-nums text-[var(--text)]">{fmt(c.votes)}</p>
                 <span
-                  className={`badge ${
-                    c.status === 'won'
-                      ? 'bg-emerald-500/20 text-emerald-400'
-                      : 'bg-sky-500/20 text-sky-400'
-                  }`}
+                  className="badge text-[10px]"
+                  style={c.status === 'won'
+                    ? { background: 'var(--green-bg)', color: 'var(--green-text)', borderColor: 'var(--green-border)' }
+                    : { background: 'var(--blue-bg)', color: 'var(--blue-text)', borderColor: 'var(--blue-border)' }
+                  }
                 >
-                  +{fmt(c.leadMargin)} {c.status}
+                  <span className="tabular-nums">+{fmt(c.leadMargin)}</span> {c.status}
                 </span>
               </div>
             </div>
@@ -82,7 +94,7 @@ export default function RSPTracker({ candidates }: Props) {
         )}
       </div>
 
-      <p className="mt-2 text-xs text-[var(--muted)] text-right">
+      <p className="mt-3 pt-2 border-t border-[var(--border)] text-[10px] sm:text-[11px] text-[var(--muted)] text-right tabular-nums">
         {filtered.length} of {candidates.length} candidates
       </p>
     </div>

@@ -4,6 +4,7 @@ const BASE = 'https://election.ekantipur.com';
 const URLS = {
   home: `${BASE}/?lng=eng`,
   rsp: `${BASE}/party/7/leading?lng=eng`,
+  spotlight: `${BASE}/pradesh-1/district-jhapa/constituency-5?lng=eng`,
 };
 const HEADERS = {
   'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Safari/537.36',
@@ -240,6 +241,59 @@ function parseRSPCandidates(html: string) {
   return candidates;
 }
 
+function parseSpotlight(html: string): { constituency: string; candidates: { id: number; name: string; party: string; img: string; partyImg: string; votes: number; margin: number; isLeading: boolean }[] } {
+  // Extract constituency name from breadcrumb or heading
+  const constMatch = html.match(/Constituency-(\d+)/i);
+  const distMatch = html.match(/district-([a-z]+)/i);
+  const constituency = distMatch && constMatch
+    ? `${distMatch[1].charAt(0).toUpperCase() + distMatch[1].slice(1)}-${constMatch[1]}`
+    : 'Jhapa-5';
+
+  const candidates: { id: number; name: string; party: string; img: string; partyImg: string; votes: number; margin: number; isLeading: boolean }[] = [];
+
+  // Split by table rows containing profile links
+  const rows = html.split(/<tr[\s>]/i);
+
+  for (const row of rows) {
+    const profileMatch = row.match(/profile\/(\d+)/);
+    if (!profileMatch) continue;
+
+    const id = parseInt(profileMatch[1], 10);
+
+    const nameMatch = row.match(/candidate-name-link[\s\S]*?<span>([^<]+)<\/span>/i);
+    const name = nameMatch ? nameMatch[1].trim() : '';
+    if (!name) continue;
+
+    const candidateImgMatch = row.match(/candidates\/([^"]+)/);
+    const img = candidateImgMatch
+      ? `https://assets-generalelection2082.ekantipur.com/candidates/${candidateImgMatch[1]}`
+      : '';
+
+    const partyImgMatch = row.match(/parties\/([^"]+)/);
+    const partyImg = partyImgMatch
+      ? `https://assets-generalelection2082.ekantipur.com/parties/${partyImgMatch[1]}`
+      : '';
+
+    const partyMatch = row.match(/party-name">([^<]+)<\/span>/i);
+    const party = partyMatch ? partyMatch[1].trim() : '';
+
+    const isWin = /votecount\s+win/i.test(row);
+
+    const voteMatch = row.match(/votecount[\s\S]*?<p>([\d,]+)<\/p>/i);
+    const votes = voteMatch ? parseInt(voteMatch[1].replace(/,/g, ''), 10) : 0;
+
+    const marginMatch = row.match(/votecount[\s\S]*?<span>\s*([\d,]+)/i);
+    const margin = marginMatch ? parseInt(marginMatch[1].replace(/,/g, ''), 10) : 0;
+
+    candidates.push({ id, name, party, img, partyImg, votes, margin, isLeading: isWin });
+  }
+
+  // Sort by votes descending
+  candidates.sort((a, b) => b.votes - a.votes);
+
+  return { constituency, candidates };
+}
+
 function computeOverview(parties: ReturnType<typeof parseParties>, provinces: ReturnType<typeof parseProvinces>) {
   const totalWon = parties.reduce((s, p) => s + p.won, 0);
   return {
@@ -254,7 +308,7 @@ function computeOverview(parties: ReturnType<typeof parseParties>, provinces: Re
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const type = searchParams.get('type') ?? 'all';
-  const valid = ['all', 'rsp', 'parties', 'overview'];
+  const valid = ['all', 'rsp', 'parties', 'overview', 'spotlight'];
 
   if (!valid.includes(type)) {
     return NextResponse.json({ error: `Invalid type. Use: ${valid.join(', ')}` }, { status: 400 });
@@ -263,10 +317,12 @@ export async function GET(request: Request) {
   try {
     const needHome = ['all', 'parties', 'overview'].includes(type);
     const needRSP = ['all', 'rsp'].includes(type);
+    const needSpotlight = ['all', 'spotlight'].includes(type);
 
     const fetches: Promise<string>[] = [];
     if (needHome) fetches.push(fetchHTML(URLS.home));
     if (needRSP) fetches.push(fetchHTML(URLS.rsp));
+    if (needSpotlight) fetches.push(fetchHTML(URLS.spotlight));
 
     const results = await Promise.all(fetches);
     let idx = 0;
@@ -285,6 +341,11 @@ export async function GET(request: Request) {
     if (needRSP) {
       const rspHtml = results[idx++];
       result.rspCandidates = parseRSPCandidates(rspHtml);
+    }
+
+    if (needSpotlight) {
+      const spotlightHtml = results[idx++];
+      result.spotlight = parseSpotlight(spotlightHtml);
     }
 
     return NextResponse.json(result, {
