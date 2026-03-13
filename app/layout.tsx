@@ -1,16 +1,28 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
+import { Analytics } from '@vercel/analytics/next';
 import './globals.css';
 
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Nepal Election 2082 — Live Results',
-  description: 'Live election results for Nepal Federal Parliament FPTP seats, 2082 BS.',
+  title: 'Nepal Election 2082 — Live Results Dashboard',
+  description: 'Live election results for Nepal Federal Parliament FPTP 165 seats, 2082 BS. Real-time seat counts, party standings, province breakdown, and constituency battles.',
+  icons: {
+    icon: [
+      { url: '/icon.svg', type: 'image/svg+xml' },
+    ],
+  },
   openGraph: {
+    title: 'Nepal Election 2082 — Live Results Dashboard',
+    description: 'Live election results for Nepal Federal Parliament FPTP 165 seats. Real-time updates every 60 seconds.',
+    type: 'website',
+    siteName: 'Nepal Election 2082',
+  },
+  twitter: {
+    card: 'summary',
     title: 'Nepal Election 2082 — Live Results',
     description: 'Live election results for Nepal Federal Parliament FPTP seats.',
-    type: 'website',
   },
 };
 
@@ -24,7 +36,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           }}
         />
       </head>
-      <body className={inter.className}>{children}</body>
+      <body className={inter.className}>
+        {children}
+        <Analytics />
+      </body>
     </html>
   );
 }

@@ -1,5 +1,5 @@
 const PARTY_COLORS: Record<string, string> = {
-  'Nepali Congress': '#2563eb',
+  'Nepali Congress': '#16a34a',
   'CPN-UML': '#dc2626',
   'CPN (Maoist Centre)': '#991b1b',
   'Nepali Communist Party': '#b91c1c',

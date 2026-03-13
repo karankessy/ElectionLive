@@ -1,21 +1,19 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback } from 'react';
 import useSWR from 'swr';
-import { ChangeEvent, ElectionData } from '@/lib/types';
+import { ElectionData } from '@/lib/types';
 import StatCard from '@/components/StatCard';
 import SeatMajorityTracker from '@/components/SeatMajorityTracker';
 import PartyLeaderboard from '@/components/PartyLeaderboard';
 import RSPTracker from '@/components/RSPTracker';
 import ProvinceBreakdown from '@/components/ProvinceBreakdown';
 import PopularCandidates from '@/components/PopularCandidates';
-import RecentChangesFeed from '@/components/RecentChangesFeed';
 import SpotlightCard from '@/components/SpotlightCard';
 import ThemeToggle from '@/components/ThemeToggle';
+import ScrollToTop from '@/components/ScrollToTop';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
-
-const REFRESH_INTERVAL = 60_000;
 
 function npt(iso: string) {
   return (
@@ -30,100 +28,14 @@ function npt(iso: string) {
   );
 }
 
-function nptShort(iso: string) {
-  return (
-    new Date(iso).toLocaleString('en-US', {
-      timeZone: 'Asia/Kathmandu',
-      hour: 'numeric',
-      minute: '2-digit',
-    }) + ' NPT'
-  );
-}
 
-/* ── Countdown ring SVG ── */
-function CountdownRing({ seconds, total }: { seconds: number; total: number }) {
-  const r = 9;
-  const circ = 2 * Math.PI * r;
-  const offset = circ * (1 - seconds / total);
-  return (
-    <svg width="22" height="22" className="countdown-ring" aria-hidden="true">
-      <circle cx="11" cy="11" r={r} stroke="var(--ring-track)" strokeWidth="2" />
-      <circle
-        cx="11"
-        cy="11"
-        r={r}
-        stroke="var(--accent)"
-        strokeWidth="2"
-        strokeDasharray={circ}
-        strokeDashoffset={offset}
-        style={{ transition: 'stroke-dashoffset 1s linear' }}
-      />
-    </svg>
-  );
-}
 
 export default function HomePage() {
   const { data, error, isLoading, mutate } = useSWR<ElectionData>(
     '/api/scrape?type=all',
     fetcher,
-    { refreshInterval: REFRESH_INTERVAL, revalidateOnFocus: false },
+    { revalidateOnFocus: false, revalidateOnReconnect: false, revalidateIfStale: false },
   );
-
-  const [baseline, setBaseline] = useState<ElectionData['parties']>([]);
-  const [changes, setChanges] = useState<ChangeEvent[]>([]);
-  const [changedPartyIds, setChangedPartyIds] = useState<Set<number>>(new Set());
-  const prevRef = useRef<ElectionData['parties']>([]);
-  const [countdown, setCountdown] = useState(60);
-  const lastFetchRef = useRef(Date.now());
-
-  const [liveAnnouncement, setLiveAnnouncement] = useState('');
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      const elapsed = Math.floor((Date.now() - lastFetchRef.current) / 1000);
-      setCountdown(Math.max(0, 60 - elapsed));
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
-
-  useEffect(() => {
-    if (!data?.parties) return;
-
-    lastFetchRef.current = Date.now();
-    setCountdown(60);
-
-    if (prevRef.current.length === 0) {
-      prevRef.current = data.parties;
-      setBaseline(data.parties);
-      return;
-    }
-
-    const newChanges: ChangeEvent[] = [];
-    const newChangedIds = new Set<number>();
-
-    for (const p of data.parties) {
-      const prev = prevRef.current.find(x => x.id === p.id);
-      if (prev && p.total !== prev.total) {
-        newChanges.push({ party: p.name, delta: p.total - prev.total, at: data.timestamp });
-        newChangedIds.add(p.id);
-      }
-    }
-
-    if (newChanges.length > 0) {
-      setChanges(c => [...newChanges, ...c].slice(0, 50));
-      setChangedPartyIds(newChangedIds);
-      setTimeout(() => setChangedPartyIds(new Set()), 1500);
-    }
-
-    const leadingParty = [...data.parties].sort((a, b) => b.total - a.total)[0];
-    if (leadingParty) {
-      setLiveAnnouncement(
-        `Results updated at ${nptShort(data.timestamp)}. ${leadingParty.name} leads with ${leadingParty.total} seats.`
-      );
-    }
-
-    prevRef.current = data.parties;
-  }, [data]);
 
   const handleRetry = useCallback(() => {
     mutate();
@@ -133,16 +45,21 @@ export default function HomePage() {
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center px-4">
-        <div className="text-center space-y-5 max-w-xs w-full">
-          <div className="live-dot mx-auto" />
-          <p className="text-[var(--text)] text-sm font-medium">Loading live election data…</p>
-          <p className="text-[var(--muted)] text-xs">Fetching latest counts from the Election Commission</p>
-          <div className="loading-bar mx-auto" style={{ maxWidth: 200 }} />
+        <div className="text-center space-y-5 max-w-sm w-full">
+          <div className="flex items-center justify-center gap-2.5 mb-2">
+            <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+              <circle cx="10" cy="10" r="10" fill="var(--accent)" />
+            </svg>
+            <p className="text-[var(--text)] text-sm font-semibold">Nepal Election 2082</p>
+          </div>
+          <p className="text-[var(--muted)] text-xs">Loading final results…</p>
+          <div className="loading-bar mx-auto" style={{ maxWidth: 240 }} />
           <div className="grid grid-cols-2 gap-3 mt-6">
             {[1, 2, 3, 4].map(i => (
               <div key={i} className="skeleton h-24 pop-in" style={{ animationDelay: `${i * 60}ms` }} />
             ))}
           </div>
+          <div className="skeleton h-40 pop-in mt-4 rounded-xl" style={{ animationDelay: '300ms' }} />
         </div>
       </div>
     );
@@ -173,22 +90,25 @@ export default function HomePage() {
 
   const { parties, provinces, rspCandidates, popularCandidates, overview, spotlight } = data;
   const MAJORITY = 83;
-  const leadingParty = [...parties].sort((a, b) => b.total - a.total)[0];
+  const winnerParty = [...parties].sort((a, b) => b.total - a.total)[0];
 
   return (
     <main className="min-h-screen">
-      {/* aria-live region */}
       <div aria-live="polite" aria-atomic="true" className="sr-only">
-        {liveAnnouncement}
+        {winnerParty
+          ? `Final results: ${winnerParty.name} wins with ${winnerParty.total} seats.`
+          : 'Election results finalized.'}
       </div>
 
-      {/* ── Header ── */}
       <header className="sticky top-0 z-50 border-b border-[var(--border)] sticky-header">
-        <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-3.5 flex items-center justify-between gap-4 flex-wrap">
+        <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5 sm:py-3 flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-2.5">
-            <div className="live-dot" />
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" className="shrink-0" aria-hidden="true">
+              <circle cx="10" cy="10" r="10" fill="var(--green)" />
+              <path d="M6 10l3 3 5-5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
             <div>
-              <h1 className="text-sm sm:text-base font-semibold text-[var(--text)]">
+              <h1 className="text-sm sm:text-base font-bold text-[var(--text)]">
                 Nepal Election 2082
               </h1>
               <p className="text-[10px] sm:text-[11px] text-[var(--muted)]">
@@ -199,89 +119,84 @@ export default function HomePage() {
 
           <div className="flex items-center gap-3 sm:gap-5 flex-wrap justify-end text-right">
             <div>
-              {leadingParty && (
-                <p className="text-[11px] sm:text-xs font-medium text-[var(--green)]">
+              {winnerParty && (
+                <p className="text-[10px] sm:text-xs font-medium text-[var(--green)]">
                   <span className="hidden sm:inline">
-                    {leadingParty.name} leads with{' '}
-                    <span className="font-semibold tabular-nums">{leadingParty.total}</span> seats
+                    {winnerParty.name} wins with{' '}
+                    <span className="font-bold tabular-nums">{winnerParty.total}</span> seats
                   </span>
                   <span className="sm:hidden">
-                    {leadingParty.name} leads ({leadingParty.total})
+                    {winnerParty.name} wins ({winnerParty.total})
                   </span>
                 </p>
               )}
-              <p className="text-[10px] text-[var(--muted)]">
-                Updated {npt(data.timestamp)}
+              <p className="text-[10px] sm:text-[11px] text-[var(--muted)]">
+                Final Results · {npt(data.timestamp)}
               </p>
             </div>
 
             <div className="flex items-center gap-2">
-              <div className="hidden sm:flex items-center gap-2">
-                <span className="badge" style={{ background: 'var(--red-bg)', color: 'var(--red-text)', borderColor: 'var(--red-border)' }}>
-                  <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
-                  Live
-                </span>
-                <div className="flex items-center gap-1.5">
-                  <CountdownRing seconds={countdown} total={60} />
-                  <span className="text-[11px] text-[var(--muted)] tabular-nums">
-                    {countdown > 0 ? `${countdown}s` : 'Refreshing…'}
-                  </span>
-                </div>
-              </div>
+              <span className="hidden sm:inline-flex badge" style={{ background: 'var(--green-bg)', color: 'var(--green-text)', borderColor: 'var(--green-border)' }}>
+                <svg width="10" height="10" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                Final
+              </span>
               <ThemeToggle />
             </div>
           </div>
         </div>
       </header>
 
-      <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8">
-        {/* ── Spotlight ── */}
+      <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-6 space-y-5 sm:space-y-6">
         {spotlight && spotlight.candidates.length > 0 && (
           <SpotlightCard race={spotlight} />
         )}
 
-        {/* ── Overview stats ── */}
         <section
           aria-label="Election overview"
           className="stat-strip grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4"
         >
-          <StatCard label="Results Declared" value={overview.declared} sub={`of ${overview.totalSeats} seats`} color="var(--accent)" />
-          <StatCard label="Still Counting" value={overview.counting} sub={`of ${overview.totalSeats} seats`} color="var(--amber)" />
-          <StatCard label="Parties Active" value={overview.totalParties} sub={`contesting ${overview.totalSeats} seats`} />
+          <StatCard label="Results Declared" value={overview.declared} sub={`of ${overview.totalSeats} seats`} color="var(--green)" />
+          <StatCard label="Remaining" value={overview.counting} sub={`of ${overview.totalSeats} seats`} color={overview.counting > 0 ? 'var(--amber)' : 'var(--green)'} />
+          <StatCard label="Parties with Seats" value={parties.filter(p => p.total > 0).length} sub={`of ${overview.totalParties} contesting`} />
           <StatCard label="Majority Mark" value={MAJORITY} sub={`of ${overview.totalSeats} seats`} color="#7c3aed" />
         </section>
 
-        {/* ── Main layout ── */}
-        <div className="grid gap-6 sm:gap-8 lg:grid-cols-[minmax(0,2.2fr)_minmax(0,1fr)]">
-          {/* Left */}
-          <section aria-label="National results" className="space-y-6 min-w-0">
-            <SeatMajorityTracker parties={parties} />
-            <PartyLeaderboard parties={parties} baseline={baseline} changedIds={changedPartyIds} />
+        <SeatMajorityTracker parties={parties} />
+
+        <div className="grid gap-5 sm:gap-6 lg:grid-cols-[minmax(0,2.2fr)_minmax(0,1fr)]">
+          <section aria-label="Final results" className="space-y-5 min-w-0">
+            <PartyLeaderboard parties={parties} baseline={parties} />
           </section>
 
-          {/* Right */}
-          <aside aria-label="Live changes and key races" className="space-y-6 min-w-0">
-            <RecentChangesFeed changes={changes} />
+          <aside aria-label="Party tracker" className="space-y-5 min-w-0">
             {rspCandidates?.length > 0 && (
               <RSPTracker candidates={rspCandidates} />
             )}
           </aside>
         </div>
 
-        {/* ── Province Breakdown (full-width) ── */}
         {provinces?.length > 0 && <ProvinceBreakdown provinces={provinces} />}
 
-        {/* ── Featured candidates ── */}
         {popularCandidates?.length > 0 && (
           <section aria-label="Featured constituency battles">
             <PopularCandidates races={popularCandidates} />
           </section>
         )}
 
-        <footer className="pt-6 sm:pt-8 mt-4 border-t border-[var(--border)] text-center text-xs text-[var(--muted)] leading-relaxed">
-          Data sourced from election.ekantipur.com — for informational purposes only. Auto-refreshes every 60 seconds.
+        <footer className="pt-6 sm:pt-8 mt-4 border-t border-[var(--border)] text-center space-y-2">
+          <p className="text-sm text-[var(--muted)] leading-relaxed">
+            Data sourced from <a href="https://election.ekantipur.com" target="_blank" rel="noopener noreferrer" className="underline decoration-[var(--border)] underline-offset-2 hover:text-[var(--text)] transition-colors">election.ekantipur.com</a> — for informational purposes only.
+          </p>
+          <p className="text-xs text-[var(--muted)]">
+            Built by{' '}
+            <a href="https://karanregmi.com.np" target="_blank" rel="noopener noreferrer" className="font-medium text-[var(--text-secondary)] hover:text-[var(--accent)] transition-colors">
+              Karan Regmi
+            </a>
+          </p>
         </footer>
       </div>
+
+      <ScrollToTop />
     </main>
   );
 }

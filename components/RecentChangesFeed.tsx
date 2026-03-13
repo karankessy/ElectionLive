@@ -23,11 +23,11 @@ export default function RecentChangesFeed({ changes }: Props) {
       <p className="section-title">Recent Changes</p>
 
       {changes.length === 0 ? (
-        <p className="text-[var(--muted)] text-xs sm:text-sm py-4 text-center">
+        <p className="text-[var(--muted)] text-xs py-3 text-center">
           No seat changes in this window
         </p>
       ) : (
-        <div className="max-h-64 overflow-y-auto space-y-0 pr-1">
+        <div className="max-h-56 overflow-y-auto space-y-0 pr-1">
           {changes.map((c, i) => (
             <div
               key={i}
@@ -37,7 +37,7 @@ export default function RecentChangesFeed({ changes }: Props) {
               }}
             >
               <span
-                className="w-2.5 h-2.5 rounded-sm mt-1 shrink-0"
+                className="w-2.5 h-2.5 rounded-sm mt-0.5 shrink-0"
                 style={{ background: partyColor(c.party) }}
               />
               <div className="flex-1 min-w-0">
