@@ -30,9 +30,9 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000) to see it in action.
 
-## Live
+## Live at
 
-👉 [election.karanregmi.com.np](https://election.karanregmi.com.np)
+[election.karanregmi.com.np](https://election.karanregmi.com.np)
 
 ## License
 
